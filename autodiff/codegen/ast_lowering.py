@@ -30,9 +30,10 @@ def print_ast(ast_obj):
 
 
 class PyExprEvaluator(NodeVisitor):
-    def __init__(self):
+    def __init__(self, node_creator: cg.NodeCreator):
         super().__init__()
         self.variable_nodes: dict[str, Variable] = {}
+        self.node_creator = node_creator
 
     def visit_Constant(self, node):
         return node.value
@@ -59,11 +60,11 @@ class PyExprEvaluator(NodeVisitor):
         
         left = self.visit(left)
         right = self.visit(right)
-        return op(left, right)
+        return self.node_creator.create(op, left, right)
 
     def visit_Name(self, node):
         if node.id not in self.variable_nodes:
-            new_node = Variable(node.id)
+            new_node = self.node_creator.create(Variable, node.id)
             self.variable_nodes[node.id] = new_node
         return self.variable_nodes[node.id]
 
@@ -79,7 +80,7 @@ class PyExprEvaluator(NodeVisitor):
 
         args = [self.visit(arg) for arg in node.args]
 
-        return funcname(*args)
+        return self.node_creator.create(funcname, *args)
 
 
 class PyStmtLowerer(PyExprEvaluator):
@@ -92,7 +93,7 @@ class PyStmtLowerer(PyExprEvaluator):
         assigns = []
         for target in node.targets:
             name = target.id
-            new_node = Variable(name, value)
+            new_node = self.node_creator.create(Variable, name, value)
             self.variable_nodes[name] = new_node
             if len(node.targets) == 1:
                 return new_node
@@ -101,7 +102,7 @@ class PyStmtLowerer(PyExprEvaluator):
         return assigns
 
 
-def lower_func_decl(ast_obj: ast.AST) -> PyFuncDeclaration:
+def lower_func_decl(ast_obj: ast.AST, node_creator: cg.NodeCreator) -> PyFuncDeclaration:
     """
     Does not support *args and **kwargs
     Only supports constant default values
@@ -125,7 +126,7 @@ def lower_func_decl(ast_obj: ast.AST) -> PyFuncDeclaration:
 
     for arg_name, arg_expr in zip(function_arg_names, function_arg_defaults):
         if arg_expr:
-            arg_expr = PyExprEvaluator().visit(arg_expr)
+            arg_expr = PyExprEvaluator(node_creator).visit(arg_expr)
 
         function_arg_objs.append(PyFuncArg(arg_name, arg_expr))
 
@@ -133,7 +134,7 @@ def lower_func_decl(ast_obj: ast.AST) -> PyFuncDeclaration:
     body_exprs = []
     return_expr = None
 
-    stmt_walker = PyStmtLowerer()
+    stmt_walker = PyStmtLowerer(node_creator)
 
     for stmt in ast_obj.body:
         if isinstance(stmt, past.Return):
@@ -150,18 +151,3 @@ def get_ast(source: str):
     f_ast = ast.parse(textwrap.dedent(sc))
 
     return f_ast
-
-if __name__ == "__main__":
-    # import math
-    # def test_func(x, y):
-    #     return math.sin(x) + x * y
-
-    from math import sin
-    def test_func2(x, y, z = 0, a = 1):
-        a = x * y
-        return sin(x) + a
-
-    sc = inspect.getsource(test_func2)
-    f_ast = ast.parse(textwrap.dedent(sc))
-    print("*" * 10)
-    print(lower_func_decl(f_ast))

@@ -37,4 +37,4 @@ class Variable(Node, ops.EvalOverloader):
             self.value.backward(adjoint)
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({self.name}, {self.value}, {id(self)})"
+        return f"{self.__class__.__name__}_n{self.node_index}({self.name}, {self.value})"

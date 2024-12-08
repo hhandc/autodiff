@@ -137,7 +137,7 @@ class BinaryOp(Op, EvalOverloader):
         self.right = right
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({self.left}, {self.right})"
+        return f"{self.__class__.__name__}_n{self.node_index}({self.left}, {self.right})"
 
 
 class UnaryOp(Op, EvalOverloader):
@@ -146,7 +146,7 @@ class UnaryOp(Op, EvalOverloader):
         self.operand = operand
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({self.operand})"
+        return f"{self.__class__.__name__}_n{self.node_index}({self.operand})"
 
 class Add(BinaryOp):
     def eval(self) -> float:
@@ -172,6 +172,9 @@ class Add(BinaryOp):
 
     def backward_forward_dependents(self):
         return []
+
+    def backward_codegen(self, adjoint_expr: Node, callback: callable):
+        return f"adjoint_n{self.node_index} = {self.adjoint}"
 
 
 class Sub(BinaryOp):

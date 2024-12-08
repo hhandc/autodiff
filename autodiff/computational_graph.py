@@ -5,6 +5,7 @@ class Node:
     def __init__(self):
         self.adjoint: float = None
         self.value: float = float("nan")
+        self.node_index: int = None
     
     def eval(self) -> float:
         """
@@ -27,3 +28,14 @@ class Node:
             a value is evaluated in D when computing dB/dD, which is dA/dB * dB/dD
         """
         raise NotImplementedError()
+
+
+class NodeCreator:
+    def __init__(self):
+        self.nodes_created = 0
+
+    def create(self, node: Node, *args, **kwargs):
+        node_obj = node(*args, **kwargs)
+        node_obj.node_index = self.nodes_created
+        self.nodes_created += 1
+        return node_obj

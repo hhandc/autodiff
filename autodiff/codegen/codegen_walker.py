@@ -8,20 +8,25 @@ from ast import NodeVisitor
  
 class NodeMap:
     """
-    A dictionary mapping of all the nodes' ids to its object
+    A dictionary mapping of all the node.node_index and variable names to its object
     """
     def __init__(self):
         self.node_map: dict[int, Node] = OrderedDict()
+        self.variable_name_map: dict[str, Node] = {}
 
     def populate_map(self, parent_node: Node):
         visited = set()
 
         def recurse_nodes(node: Node):
-            if id(node) in visited:
+            if node.node_index in visited:
                 return
-            self.node_map[id(node)] = node
+            self.node_map[node.node_index] = node
 
             match node:
+                case Variable():
+                    self.variable_name_map[node.name] = node
+                    if isinstance(node.value, Node):
+                        recurse_nodes(node.value)
                 case ops.UnaryOp():
                     recurse_nodes(node.operand)
                 case ops.BinaryOp():
@@ -67,3 +72,35 @@ class ForwardCodegenWalker:
                 if expr_tag not in self.generated_exprs:
                     self.generated_exprs.append(expr_tag)
                 return node.forward_codegen(self.walk)
+
+
+class ForwardDebugCodegenWalker:
+    def walk(self, node: Node, assignment=False):
+        match node:
+            case Variable():
+                if assignment:
+                    return f"n{node.node_index} = {self.walk(node.value)}"
+                else:
+                    return f"n{node.node_index}"
+
+            case ops.Const():
+                return f"n{node.node_index}"
+            case ops.BinaryOp():
+                return node.forward_codegen(self.walk)
+            case ops.UnaryOp():
+                return node.forward_codegen(self.walk)
+
+
+class BackwardCodegenWalker:
+    def __init__(self, adjoint_variables: list[str]):
+        self.adjoint_variables = adjoint_variables
+
+    def walk(self, node: Node, adjoint_expr: Node):
+        match node:
+            case Variable():
+                name = node.name
+                if name in self.adjoint_variables:
+                    return f"adjoint_{name} += {self.walk(adjoint_expr)}"
+
+            case ops.UnaryOp():
+                pass
