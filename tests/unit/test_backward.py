@@ -83,6 +83,27 @@ def test_fractions():
 
     assert x.adjoint == approx(dx) and y.adjoint == approx(dy)
 
+def test_fractions_asgn():
+    x = Variable("x", 1)
+    y = Variable("y", 1)
+
+
+    left = (x ** 2) / (y ** 2 + 1)
+    right = Variable("right", (y ** 2) / (x ** 2 + y))
+    expr = left - right
+
+    x_val = x.value
+    y_val = y.value
+
+    dx = (2 * x_val) / (y_val ** 2 + 1) + (2 * x_val * y_val ** 2) / (x_val ** 2 + y_val) ** 2
+    dy = -(2 * y_val * x_val ** 2) / (y_val ** 2 + 1) ** 2 - (2 * y_val * x_val ** 2 + y_val ** 2) / (x_val ** 2 + y_val) ** 2
+
+    expr.eval()
+    expr.backward()
+
+    assert x.adjoint == approx(dx) and y.adjoint == approx(dy)
+
+
 def test_exponent_eq():
     x = Variable("x", 1)
     y = Variable("y", 1)
@@ -102,6 +123,35 @@ def test_exponent_eq():
     dz = 4 * z_val ** 3 * y_val * math.exp(4 * x_val - z_val ** 4 * y_val)
 
     assert x.adjoint == approx(dx) and y.adjoint == approx(dy) and z.adjoint == approx(dz)
+
+def test_assignment_multi():
+    x = Variable("x", 2)
+    y = Variable("y", 11)
+    
+    """
+    a = x * y
+    b = cos(x) + sin(y)
+    c = a + b + x
+
+    == x * y + cos(x) + sin(y) + x
+    dx = y - sin(x) + 1
+    dy = x + cos(y)
+    """
+
+    a = Variable("a", x * y)
+    b = Variable("b", Cos(x) + Sin(y))
+    c = Variable("c", a + b + x)
+
+    c.eval()
+    c.backward()
+
+    x_val = x.value
+    y_val = y.value
+    
+    dx = y_val - math.sin(x_val) + 1
+    dy = x_val + math.cos(y_val)
+
+    assert x.adjoint == approx(dx) and y.adjoint == approx(dy)
 
 """
 make backward sqrt

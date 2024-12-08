@@ -14,6 +14,20 @@ def test_add():
 
     assert add_expr.eval() == approx(a_true + b_true)
 
+def test_add2():
+    a_true = 1.442
+    a = Variable("a", a_true)
+
+    b_true = 3.141
+    b = Variable("b", b_true)
+    
+    c_true = a_true + b_true
+    c = Variable("c", a + b)
+
+    add_expr = a + b
+
+    assert c.eval() == approx(a_true + b_true)
+
 def test_sub():
     a_true = 4.6123
     a = Variable("a", a_true)
