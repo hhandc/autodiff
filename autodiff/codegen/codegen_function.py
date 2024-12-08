@@ -13,9 +13,30 @@ class FunctionCodeGen:
 
 
         self.node_map = NodeMap()
+        self.dependent_forward_node_indices = set()
+
+        def collect_dependent_node_indices(node: Node):
+            for index in node.backward_value_dependent_node_indices():
+                if index in self.node_map.node_map and not isinstance(self.node_map[index], Variable) and not isinstance(self.node_map[index], ops.Const):
+                    self.dependent_forward_node_indices.add(index)
+            match node:
+                case ops.BinaryOp():
+                    collect_dependent_node_indices(node.left)
+                    collect_dependent_node_indices(node.right)
+                case ops.UnaryOp():
+                    collect_dependent_node_indices(node.operand)
+                case Variable():
+                    if isinstance(node.value, Node):
+                        collect_dependent_node_indices(node.value)
+
         for body in func_decl.body:
             self.node_map.populate_map(body)
+            collect_dependent_node_indices(body)
+
         self.node_map.populate_map(func_decl.return_body)
+        collect_dependent_node_indices(func_decl.return_body)
+
+        print(self.dependent_forward_node_indices)
 
         self.dependent_variables = set(self.node_map.node_map.keys())
 
@@ -26,7 +47,8 @@ class FunctionCodeGen:
         argstrs = []
         for arg in self.func_decl.args:
             if arg.default:
-                argstrs.append(f"{arg.name} = {arg.default}")
+                walker = ForwardCodegenWalker()
+                argstrs.append(f"{arg.name} = {walker.walk(arg.default)}")
             else:
                 argstrs.append(arg.name)
         
@@ -42,7 +64,10 @@ class FunctionCodeGen:
         self.code.append(code)
 
     def generate_forward(self):
-        walker = ForwardCodegenWalker()
+        def inject_forward_code_line_callback(code: str):
+            self.code.append(" " * 4 + code)
+        
+        walker = ForwardCodegenWalker(self.dependent_forward_node_indices, inject_forward_code_line_callback)
         debug_walker = ForwardDebugCodegenWalker()
 
         for stmt in self.func_decl.body:
@@ -58,7 +83,7 @@ class FunctionCodeGen:
                 else:
                     code += "  # " + debug_walker.walk(stmt)
 
-            self.code.append("    " + code)
+            self.code.append(" " * 4 + code)
 
         forward_return_expr = f"forward_return = {walker.walk(self.func_decl.return_body)}"
 

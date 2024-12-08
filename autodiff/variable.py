@@ -52,5 +52,8 @@ class Variable(Node, ops.EvalOverloader):
         if not isinstance(self.value, Number):
             callback(self.value, adjoint_var_name, adjoint_target_variables, callable, code_callback)
 
+    def get_value_var_name(self):
+        return self.name
+
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}_n{self.node_index}({self.name}, {self.value})"

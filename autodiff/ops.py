@@ -171,7 +171,7 @@ class Add(BinaryOp):
     def forward_codegen(self, walk_function: callable):
         return f"{walk_function(self.left)} + {walk_function(self.right)}"
 
-    def backward_forward_dependents(self):
+    def backward_value_dependent_node_indices(self):
         return []
 
     def backward_codegen(self, adjoint_var_name: str, adjoint_target_variables: set[str], callback: callable, code_callback: callable):
@@ -208,7 +208,7 @@ class Sub(BinaryOp):
     def forward_codegen(self, walk_function: callable):
         return f"{walk_function(self.left)} - {walk_function(self.right)}"
 
-    def backward_forward_dependents(self):
+    def backward_value_dependent_node_indices(self):
         return []
     
     def backward_codegen(self, adjoint_var_name: str, adjoint_target_variables: set[str], callback: callable, code_callback: callable):
@@ -246,8 +246,8 @@ class Mul(BinaryOp):
     def forward_codegen(self, walk_function: callable):
         return f"{walk_function(self.left)} * {walk_function(self.right)}"
 
-    def backward_forward_dependents(self):
-        return [self.right, self.left]
+    def backward_value_dependent_node_indices(self):
+        return [self.right.node_index, self.left.node_index]
     
     def backward_codegen(self, adjoint_var_name: str, adjoint_target_variables: set[str], callback: callable, code_callback: callable):
         # 1. emit adjoint_n = ... for myself
@@ -280,8 +280,8 @@ class Div(BinaryOp):
     def forward_codegen(self, walk_function: callable):
         return f"{walk_function(self.left)} / {walk_function(self.right)}"
 
-    def backward_forward_dependents(self):
-        return [self.right ** -1, -self.left * self.right ** -2]
+    def backward_value_dependent_node_indices(self):
+        return [self.left.node_index, self.right.node_index]
     
     def backward_codegen(self, adjoint_var_name: str, adjoint_target_variables: set[str], callback: callable, code_callback: callable):
         # 1. emit adjoint_n = ... for myself
@@ -319,8 +319,8 @@ class Pow(BinaryOp):
     def forward_codegen(self, walk_function: callable):
         return f"{walk_function(self.left)} ** {walk_function(self.right)}"
 
-    def backward_forward_dependents(self):
-        return [self.right * self.left ** (self.right - 1), self.left ** self.right]
+    def backward_value_dependent_node_indices(self):
+        return [self.left.node_index, self.right.node_index]
     
     def backward_codegen(self, adjoint_var_name: str, adjoint_target_variables: set[str], callback: callable, code_callback: callable):
         if adjoint_var_name:
@@ -328,8 +328,8 @@ class Pow(BinaryOp):
         else:
             code_callback(f"adjoint_n{self.node_index} = 1.0")
 
-        callback(self.left, f"adjoint_n{self.node_index} * value_n{self.right.node_index} * value_n{self.left.node_index} ** (value_n{self.right.node_index} - 1)", adjoint_target_variables, callback, code_callback)
-        callback(self.right, f"adjoint_n{self.node_index} * value_n{self.left.node_index} ** value_n{self.right.node_index}", adjoint_target_variables, callback, code_callback)
+        callback(self.left, f"adjoint_n{self.node_index} * {self.right.get_value_var_name()} * {self.left.get_value_var_name()} ** ({self.right.get_value_var_name()} - 1)", adjoint_target_variables, callback, code_callback)
+        callback(self.right, f"adjoint_n{self.node_index} * {self.left.get_value_var_name()} ** {self.right.get_value_var_name()}", adjoint_target_variables, callback, code_callback)
 
 class Cos(UnaryOp):
     def eval(self) -> float:
@@ -344,8 +344,8 @@ class Cos(UnaryOp):
     def forward_codegen(self, walk_function: callable):
         return f"math.cos({walk_function(self.operand)})"
 
-    def backward_forward_dependents(self):
-        return [-Sin(self.operand)]
+    def backward_value_dependent_node_indices(self):
+        return [self.operand.node_index]
 
 class Sin(UnaryOp):
     def eval(self) -> float:
@@ -360,7 +360,7 @@ class Sin(UnaryOp):
     def forward_codegen(self, walk_function: callable):
         return f"math.sin({walk_function(self.operand)})"
 
-    def backward_forward_dependents(self):
+    def backward_value_dependent_node_indices(self):
         return [Cos(self.operand)]
 
 class Exp(UnaryOp):
@@ -376,8 +376,8 @@ class Exp(UnaryOp):
     def forward_codegen(self, walk_function: callable):
         return f"math.exp({walk_function(self.operand)})"
 
-    def backward_forward_dependents(self):
-        return [Exp(self.operand)]
+    def backward_value_dependent_node_indices(self):
+        return []
     
     def backward_codegen(self, adjoint_var_name: str, adjoint_target_variables: set[str], callback: callable, code_callback: callable):
         if adjoint_var_name:
@@ -401,7 +401,7 @@ class Neg(UnaryOp):
     def forward_codegen(self, walk_function: callable):
         return f"-{walk_function(self.operand)}"
 
-    def backward_forward_dependents(self):
+    def backward_value_dependent_node_indices(self):
         return []
 
 
@@ -418,5 +418,5 @@ class sqrt(BinaryOp):
     def forward_codegen(self, walk_function: callable):
         return f"math.sqrt({walk_function(self.operand)})"        
 
-    def backward_forward_dependents(self):
+    def backward_value_dependent_node_indices(self):
         return [sqrt(self.operand)]

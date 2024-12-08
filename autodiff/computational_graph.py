@@ -45,7 +45,16 @@ class Node:
         """
         raise NotImplementedError()
     
+    def backward_value_dependent_node_indices(self):
+        """
+        Return the list of indices of nodes where its values are required for computation of backward mode pass
+        """
+        return []
+
     def get_value_var_name(self):
+        """
+        Return the variable name that should hold the computed forward value of the node. In case of constants, it should return its value instaed
+        """
         return f"value_n{self.node_index}"
 
 class NodeCreator:

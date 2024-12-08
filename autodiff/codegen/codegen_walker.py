@@ -40,10 +40,14 @@ class NodeMap:
 
 
 class ForwardCodegenWalker:
-    def __init__(self, variable_alias_map: dict[str, str] = {}):
+    def __init__(self, generate_intermediate_value_node_indices: set[int] = set(), intermediate_value_code_callback: callable = (lambda x: x), variable_alias_map: dict[str, str] = {}):
         """
+        generate_intermediate_value_node_indices : node indices where the forward computation of the node should be saved
+        intermediate_value_code_callback : callback function that should receive the intermediate value code
         variable_alias_map : a dictionary which holds the value of aliases that should be used in place of key variable names.
         """
+        self.generate_intermediate_value_node_indices = generate_intermediate_value_node_indices
+        self.intermediate_value_code_callback = intermediate_value_code_callback
         self.aliases = variable_alias_map
         self.generated_exprs: list[str] = []
 
@@ -62,16 +66,26 @@ class ForwardCodegenWalker:
 
             case ops.Const():
                 return node.value
+
             case ops.BinaryOp():
                 expr_tag = str(node)
                 if expr_tag not in self.generated_exprs:
                     self.generated_exprs.append(expr_tag)
-                return node.forward_codegen(self.walk)
+
+                code = node.forward_codegen(self.walk)
+                if node.node_index in self.generate_intermediate_value_node_indices:
+                    self.intermediate_value_code_callback(f"{node.get_value_var_name()} = {code}")
+                return code
+
             case ops.UnaryOp():
                 expr_tag = str(node)
                 if expr_tag not in self.generated_exprs:
                     self.generated_exprs.append(expr_tag)
-                return node.forward_codegen(self.walk)
+                
+                code = node.forward_codegen(self.walk)
+                if node.node_index in self.generate_intermediate_value_node_indices:
+                    self.intermediate_value_code_callback(f"{node.get_value_var_name()} = {code}")
+                return code
 
 
 class ForwardDebugCodegenWalker:
