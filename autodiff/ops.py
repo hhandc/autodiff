@@ -1,5 +1,5 @@
 import typing
-from autodiff.ast import Node
+from autodiff.computational_graph import Node
 import math
 
 class EvalOverloader:

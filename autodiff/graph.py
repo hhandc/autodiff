@@ -9,8 +9,6 @@ def draw_computation_graph(name: str, expr):
 
     dot.render(name, format="png")
 
-
-
 def recurse_expr_cgraph(expr: Node, dot: graphviz.Digraph, parent_id: str = None):
     match expr:
         case UnaryOp():
@@ -41,4 +39,3 @@ def recurse_expr_cgraph(expr: Node, dot: graphviz.Digraph, parent_id: str = None
             dot.node(cid, str(expr.value))
             if parent_id:
                 dot.edge(parent_id, cid)
-

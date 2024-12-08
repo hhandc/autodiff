@@ -1,4 +1,4 @@
-from autodiff.ast import Node
+from autodiff.graph import Node
 from autodiff.ops import UnaryOp, BinaryOp, Const
 from autodiff.variable import Variable
 

@@ -102,3 +102,7 @@ def test_exponent_eq():
     dz = 4 * z_val ** 3 * y_val * math.exp(4 * x_val - z_val ** 4 * y_val)
 
     assert x.adjoint == approx(dx) and y.adjoint == approx(dy) and z.adjoint == approx(dz)
+
+"""
+make backward sqrt
+"""
