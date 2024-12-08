@@ -1,3 +1,3 @@
 test:
 	source venv/bin/activate; \
-	pytest tests/
+	pytest -rA tests/
