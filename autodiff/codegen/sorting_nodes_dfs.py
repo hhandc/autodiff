@@ -2,7 +2,7 @@ from autodiff.graph import Node
 from autodiff.ops import UnaryOp, BinaryOp, Const
 from autodiff.variable import Variable
 
-def sort_forward_cg(parent: Node) -> list[str]:
+def sort_forward_cg(parent: Node) -> list[int]:
     """
     Given an autodiff computation graph parent(toplevel) node, return the topological order of the nodes needed for forward value evaluation.
     This is done by postorder traversal.
@@ -21,13 +21,13 @@ def sort_forward_cg(parent: Node) -> list[str]:
             case BinaryOp():
                 recurse_nodes(node.left)
                 recurse_nodes(node.right)
-        result.append(repr(node))
+        result.append(id(node))
 
     recurse_nodes(parent)
 
     return result
 
-def sort_backward_cg(parent: Node) -> list[str]:
+def sort_backward_cg(parent: Node) -> list[int]:
     """
     Given an autodiff computation graph parent(toplevel) node, return the topological order of the nodes needed for backward gradient evaluation.
     This is done by preorder traversal.
