@@ -30,7 +30,7 @@ def recurse_expr_cgraph(expr: Node, dot: graphviz.Digraph, parent_id: str = None
 
         case Variable():
             cid = str(id(expr))
-            dot.node(cid, expr.variable_name)
+            dot.node(cid, expr.name)
             if parent_id:
                 dot.edge(parent_id, cid)
 

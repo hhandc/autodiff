@@ -10,9 +10,9 @@ class Variable(Node, ops.EvalOverloader):
     Base class for variables
     """
 
-    def __init__(self, variable_name : str, value : Union[float, Node] = float("nan")):
+    def __init__(self, name : str, value : Union[float, Node] = float("nan")):
         super().__init__()
-        self.variable_name = variable_name
+        self.name = name
         self.value = value
         
     def eval(self) -> float:
@@ -37,4 +37,4 @@ class Variable(Node, ops.EvalOverloader):
             self.value.backward(adjoint)
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({self.variable_name}, {self.value})"
+        return f"{self.__class__.__name__}({self.name}, {self.value}, {id(self)})"

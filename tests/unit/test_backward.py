@@ -26,8 +26,6 @@ def test_backward_rosenbrock():
     expr.eval()
     expr.backward()
 
-    draw_computation_graph("test1", expr)
-
     grad_x = -2 * a + 2 * x.value -4 * b * x.value + 4 * b * x.value ** 3
     grad_y = 2 * b * y.value - 2 * b * x.value ** 2
 

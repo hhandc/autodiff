@@ -119,6 +119,13 @@ class Op(Node, EvalOverloader):
         when top node, adjacent is 1.0 because ex) partial z / partial z = 1
     """
 
+    def forward_codegen(self, walk_function: callable):
+        """
+        walk_function : Function which should be used to walk down the tree.
+                        Children of the current node should be passed as arg to this function.
+        """
+        raise NotImplementedError()
+
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}"
 
@@ -160,6 +167,12 @@ class Add(BinaryOp):
         # da/dright = 1. We need to invoke right.backward()
         self.right.backward(self.adjoint)
 
+    def forward_codegen(self, walk_function: callable):
+        return f"{walk_function(self.left)} + {walk_function(self.right)}"
+
+    def backward_forward_dependents(self):
+        return []
+
 
 class Sub(BinaryOp):
     def eval(self) -> float:
@@ -180,6 +193,11 @@ class Sub(BinaryOp):
         # da/dright = -1. We need to invoke right.backward()
         self.right.backward(-self.adjoint)
 
+    def forward_codegen(self, walk_function: callable):
+        return f"{walk_function(self.left)} - {walk_function(self.right)}"
+
+    def backward_forward_dependents(self):
+        return []
 
 class Mul(BinaryOp):
     def eval(self) -> float:
@@ -202,6 +220,12 @@ class Mul(BinaryOp):
         # dself/dright = left.value
         self.right.backward(self.adjoint * self.left.value)
 
+    def forward_codegen(self, walk_function: callable):
+        return f"{walk_function(self.left)} * {walk_function(self.right)}"
+
+    def backward_forward_dependents(self):
+        return [self.right, self.left]
+
 class Div(BinaryOp):
     def eval(self) -> float:
         self.value = self.left.eval() / self.right.eval()
@@ -219,6 +243,11 @@ class Div(BinaryOp):
 
         self.right.backward(self.adjoint * -self.left.value * self.right.value ** -2)
 
+    def forward_codegen(self, walk_function: callable):
+        return f"{walk_function(self.left)} / {walk_function(self.right)}"
+
+    def backward_forward_dependents(self):
+        return [self.right ** -1, -self.left * self.right ** -2]
 
 class Pow(BinaryOp):
     def eval(self) -> float:
@@ -242,6 +271,11 @@ class Pow(BinaryOp):
         # dself/dright = left ** right ln left
         self.right.backward(self.adjoint * self.left.value ** self.right.value * math.log(self.left.value) if self.left.value != 0 else 0)
 
+    def forward_codegen(self, walk_function: callable):
+        return f"{walk_function(self.left)} ** {walk_function(self.right)}"
+
+    def backward_forward_dependents(self):
+        return [self.right * self.left ** (self.right - 1), self.left ** self.right]
 
 class Cos(UnaryOp):
     def eval(self) -> float:
@@ -253,6 +287,12 @@ class Cos(UnaryOp):
 
         self.operand.backward(self.adjoint * -math.sin(self.operand.value))
 
+    def forward_codegen(self, walk_function: callable):
+        return f"math.cos({walk_function(self.operand)})"
+
+    def backward_forward_dependents(self):
+        return [-Sin(self.operand)]
+
 class Sin(UnaryOp):
     def eval(self) -> float:
         self.value = math.sin(self.operand.eval())
@@ -263,6 +303,11 @@ class Sin(UnaryOp):
 
         self.operand.backward(self.adjoint * math.cos(self.operand.value))
 
+    def forward_codegen(self, walk_function: callable):
+        return f"math.sin({walk_function(self.operand)})"
+
+    def backward_forward_dependents(self):
+        return [Cos(self.operand)]
 
 class Exp(UnaryOp):
     def eval(self) -> float:
@@ -274,6 +319,12 @@ class Exp(UnaryOp):
 
         self.operand.backward(self.adjoint * math.exp(self.operand.value))
 
+    def forward_codegen(self, walk_function: callable):
+        return f"math.exp({walk_function(self.operand)})"
+
+    def backward_forward_dependents(self):
+        return [Exp(self.operand)]
+
 class Neg(UnaryOp):
     def eval(self) -> float:
         self.value = -self.operand.eval()
@@ -284,10 +335,12 @@ class Neg(UnaryOp):
 
         self.operand.backward(-self.adjoint)
 
+    def forward_codegen(self, walk_function: callable):
+        return f"-{walk_function(self.operand)}"
 
-"""
-make a class sqrt and make a test
-"""
+    def backward_forward_dependents(self):
+        return []
+
 
 class sqrt(BinaryOp):
     def eval(self) -> float:
@@ -298,3 +351,9 @@ class sqrt(BinaryOp):
         super().backward(adjoint)
 
         self.operand.backward(self.adjoint * math.sqrt(self.operand.value()))
+
+    def forward_codegen(self, walk_function: callable):
+        return f"math.sqrt({walk_function(self.operand)})"        
+
+    def backward_forward_dependents(self):
+        return [sqrt(self.operand)]
