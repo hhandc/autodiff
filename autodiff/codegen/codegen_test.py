@@ -81,8 +81,6 @@ def test_func(x):
 
 from autodiff.codegen import value_and_grad, value_and_grad_code
 
-func = beale_func
-
 print("generated code:")
 print(value_and_grad_code(func))
 print("#" * 20)
