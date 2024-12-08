@@ -145,8 +145,8 @@ def lower_func_decl(ast_obj: ast.AST, node_creator: cg.NodeCreator) -> PyFuncDec
     
     return func_declaration
     
-def get_ast(source: str):
-    sc = inspect.getsource(source)
+def get_ast(obj: object):
+    sc = inspect.getsource(obj)
     f_ast = ast.parse(textwrap.dedent(sc))
 
     return f_ast
