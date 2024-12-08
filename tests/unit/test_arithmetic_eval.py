@@ -46,3 +46,14 @@ def test_div():
     expr = a / b
 
     assert expr.eval() == approx(a_true / b_true)
+
+def test_pow():
+    a_true = random.random()
+    a = Variable("a", a_true)
+
+    b_true = random.random()
+    b = Variable("b", b_true)
+
+    expr = a ** b
+
+    assert expr.eval() == approx(a_true ** b_true)
