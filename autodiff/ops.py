@@ -202,6 +202,17 @@ class Sub(BinaryOp):
 
     def backward_forward_dependents(self):
         return []
+    
+    def backward_codegen(self, adjoint_var_name: str, adjoint_target_variables: set[str], callback: callable, code_callback: callable):
+        # 1. emit adjoint_n = ... for myself
+        if adjoint_var_name:
+            code_callback(f"adjoint_n{self.node_index} = {adjoint_var_name}")
+        else:
+            code_callback(f"adjoint_n{self.node_index} = 1.0")
+
+        # 2. make left with 1 as adjoint, but right as -1? i think
+        callback(self.left, f"adjoint_n{self.node_index}", adjoint_target_variables, callback, code_callback)
+        callback(self.right, f"-1 * adjoint_n{self.node_index}", adjoint_target_variables, callback, code_callback)
 
 class Mul(BinaryOp):
     def eval(self) -> float:
@@ -229,6 +240,17 @@ class Mul(BinaryOp):
 
     def backward_forward_dependents(self):
         return [self.right, self.left]
+    
+    def backward_codegen(self, adjoint_var_name: str, adjoint_target_variables: set[str], callback: callable, code_callback: callable):
+        # 1. emit adjoint_n = ... for myself
+        if adjoint_var_name:
+            code_callback(f"adjoint_n{self.node_index} = {adjoint_var_name}")
+        else:
+            code_callback(f"adjoint_n{self.node_index} = 1.0")
+
+        callback(self.left, f"adjoint_n{self.node_index} * value_n{self.right.node_index}", adjoint_target_variables, callback, code_callback)
+        callback(self.right, f"adjoint_n{self.node_index} * value_n{self.left.node_index}", adjoint_target_variables, callback, code_callback)
+
 
 class Div(BinaryOp):
     def eval(self) -> float:
@@ -252,6 +274,17 @@ class Div(BinaryOp):
 
     def backward_forward_dependents(self):
         return [self.right ** -1, -self.left * self.right ** -2]
+    
+    def backward_codegen(self, adjoint_var_name: str, adjoint_target_variables: set[str], callback: callable, code_callback: callable):
+        # 1. emit adjoint_n = ... for myself
+        if adjoint_var_name:
+            code_callback(f"adjoint_n{self.node_index} = {adjoint_var_name}")
+        else:
+            code_callback(f"adjoint_n{self.node_index} = 1.0")
+
+        callback(self.left, f"adjoint_n{self.node_index} * value_n{self.right.node_index} ** -1", adjoint_target_variables, callback, code_callback)
+        callback(self.right, f"adjoint_n{self.node_index} * -1 * value_n{self.left.node_index} * value_n{self.right.node_index} ** -2", adjoint_target_variables, callback, code_callback)
+
 
 class Pow(BinaryOp):
     def eval(self) -> float:
