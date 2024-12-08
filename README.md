@@ -14,3 +14,5 @@ $ source venv/bin/activate
 $ pip3 install -e .
 ```
 - To run tests, run `pytest tests/`
+
+Note that **everytime before you start developing, you have to enable the venv** by running `source venv/bin/activate` in your terminal.
