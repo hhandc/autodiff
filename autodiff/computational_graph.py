@@ -29,10 +29,11 @@ class Node:
         """
         raise NotImplementedError()
 
-    def forward_codegen(self, walk_function: callable):
+    def forward_codegen(self, walk_function: callable, intermediate_value_node_indices: set[int] = set(), current_precedence: int = 100):
         """
         walk_function : Function which should be used to walk down the tree.
                         Children of the current node should be passed as arg to this function.
+        intermediate_value_node_indices : node ids which are assigned to intermediate values and can be used instead of generating code
         """
         raise NotImplementedError()
 

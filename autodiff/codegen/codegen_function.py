@@ -66,7 +66,7 @@ class FunctionCodeGen:
             self.code.append(" " * 4 + code)
         
         walker = ForwardCodegenWalker(self.dependent_forward_node_indices, inject_forward_code_line_callback)
-        debug_walker = ForwardDebugCodegenWalker()
+        debug_walker = ForwardDebugCodegenWalker(self.dependent_forward_node_indices)
 
         for stmt in self.func_decl.body:
             if isinstance(stmt, Variable):

@@ -103,7 +103,7 @@ class Const(Node, EvalOverloader):
     def get_value_var_name(self):
         return str(self.value)
     
-    def forward_codegen(self, walk_function: callable):
+    def forward_codegen(self, walk_function: callable, intermediate_value_node_indices: set[int] = set(), current_precedence: int = 100):
         return str(self.value)
     
     def backward_codegen(self, adjoint_var_name: str, adjoint_target_variables: set[str], callback: callable, code_callback: callable):
@@ -168,8 +168,16 @@ class Add(BinaryOp):
         # da/dright = 1. We need to invoke right.backward()
         self.right.backward(self.adjoint)
 
-    def forward_codegen(self, walk_function: callable):
-        return f"{walk_function(self.left)} + {walk_function(self.right)}"
+    def forward_codegen(self, walk_function: callable, intermediate_value_node_indices: set[int] = set(), current_precedence: int = 100):
+        left_code = walk_function(self.left, current_precedence)
+        if self.left.node_index in intermediate_value_node_indices:
+            left_code =  self.left.get_value_var_name()
+
+        right_code = walk_function(self.right, current_precedence)
+        if self.right.node_index in intermediate_value_node_indices:
+            right_code =  self.right.get_value_var_name()
+
+        return f"{left_code} + {right_code}"
 
     def backward_value_dependent_node_indices(self):
         return []
@@ -205,8 +213,15 @@ class Sub(BinaryOp):
         # da/dright = -1. We need to invoke right.backward()
         self.right.backward(-self.adjoint)
 
-    def forward_codegen(self, walk_function: callable):
-        return f"{walk_function(self.left)} - {walk_function(self.right)}"
+    def forward_codegen(self, walk_function: callable, intermediate_value_node_indices: set[int] = set(), current_precedence: int = 100):
+        left_code = walk_function(self.left, current_precedence)
+        if self.left.node_index in intermediate_value_node_indices:
+            left_code =  self.left.get_value_var_name()
+
+        right_code = walk_function(self.right, current_precedence)
+        if self.right.node_index in intermediate_value_node_indices:
+            right_code =  self.right.get_value_var_name()
+        return f"{left_code} - {right_code}"
 
     def backward_value_dependent_node_indices(self):
         return []
@@ -243,8 +258,15 @@ class Mul(BinaryOp):
         # dself/dright = left.value
         self.right.backward(self.adjoint * self.left.value)
 
-    def forward_codegen(self, walk_function: callable):
-        return f"{walk_function(self.left)} * {walk_function(self.right)}"
+    def forward_codegen(self, walk_function: callable, intermediate_value_node_indices: set[int] = set(), current_precedence: int = 100):
+        left_code = walk_function(self.left, current_precedence)
+        if self.left.node_index in intermediate_value_node_indices:
+            left_code =  self.left.get_value_var_name()
+
+        right_code = walk_function(self.right, current_precedence)
+        if self.right.node_index in intermediate_value_node_indices:
+            right_code =  self.right.get_value_var_name()
+        return f"{left_code} * {right_code}"
 
     def backward_value_dependent_node_indices(self):
         return [self.right.node_index, self.left.node_index]
@@ -277,8 +299,15 @@ class Div(BinaryOp):
 
         self.right.backward(self.adjoint * -self.left.value * self.right.value ** -2)
 
-    def forward_codegen(self, walk_function: callable):
-        return f"{walk_function(self.left)} / {walk_function(self.right)}"
+    def forward_codegen(self, walk_function: callable, intermediate_value_node_indices: set[int] = set(), current_precedence: int = 100):
+        left_code = walk_function(self.left, current_precedence)
+        if self.left.node_index in intermediate_value_node_indices:
+            left_code =  self.left.get_value_var_name()
+
+        right_code = walk_function(self.right, current_precedence)
+        if self.right.node_index in intermediate_value_node_indices:
+            right_code =  self.right.get_value_var_name()
+        return f"{left_code} / {right_code}"
 
     def backward_value_dependent_node_indices(self):
         return [self.left.node_index, self.right.node_index]
@@ -316,8 +345,15 @@ class Pow(BinaryOp):
         # dself/dright = left ** right ln left
         self.right.backward(self.adjoint * self.left.value ** self.right.value * math.log(self.left.value) if self.left.value != 0 else 0)
 
-    def forward_codegen(self, walk_function: callable):
-        return f"{walk_function(self.left)} ** {walk_function(self.right)}"
+    def forward_codegen(self, walk_function: callable, intermediate_value_node_indices: set[int] = set(), current_precedence: int = 100):
+        left_code = walk_function(self.left, current_precedence)
+        if self.left.node_index in intermediate_value_node_indices:
+            left_code =  self.left.get_value_var_name()
+
+        right_code = walk_function(self.right, current_precedence)
+        if self.right.node_index in intermediate_value_node_indices:
+            right_code =  self.right.get_value_var_name()
+        return f"{left_code} ** {right_code}"
 
     def backward_value_dependent_node_indices(self):
         return [self.left.node_index, self.right.node_index]
@@ -341,7 +377,7 @@ class Cos(UnaryOp):
 
         self.operand.backward(self.adjoint * -math.sin(self.operand.value))
 
-    def forward_codegen(self, walk_function: callable):
+    def forward_codegen(self, walk_function: callable, intermediate_value_node_indices: set[int] = set(), current_precedence: int = 100):
         return f"math.cos({walk_function(self.operand)})"
 
     def backward_value_dependent_node_indices(self):
@@ -357,7 +393,7 @@ class Sin(UnaryOp):
 
         self.operand.backward(self.adjoint * math.cos(self.operand.value))
 
-    def forward_codegen(self, walk_function: callable):
+    def forward_codegen(self, walk_function: callable, intermediate_value_node_indices: set[int] = set(), current_precedence: int = 100):
         return f"math.sin({walk_function(self.operand)})"
 
     def backward_value_dependent_node_indices(self):
@@ -373,7 +409,7 @@ class Exp(UnaryOp):
 
         self.operand.backward(self.adjoint * math.exp(self.operand.value))
 
-    def forward_codegen(self, walk_function: callable):
+    def forward_codegen(self, walk_function: callable, intermediate_value_node_indices: set[int] = set(), current_precedence: int = 100):
         return f"math.exp({walk_function(self.operand)})"
 
     def backward_value_dependent_node_indices(self):
@@ -398,7 +434,7 @@ class Neg(UnaryOp):
 
         self.operand.backward(-self.adjoint)
 
-    def forward_codegen(self, walk_function: callable):
+    def forward_codegen(self, walk_function: callable, intermediate_value_node_indices: set[int] = set(), current_precedence: int = 100):
         return f"-{walk_function(self.operand)}"
 
     def backward_value_dependent_node_indices(self):
@@ -415,7 +451,7 @@ class sqrt(BinaryOp):
 
         self.operand.backward(self.adjoint * math.sqrt(self.operand.value()))
 
-    def forward_codegen(self, walk_function: callable):
+    def forward_codegen(self, walk_function: callable, intermediate_value_node_indices: set[int] = set(), current_precedence: int = 100):
         return f"math.sqrt({walk_function(self.operand)})"        
 
     def backward_value_dependent_node_indices(self):

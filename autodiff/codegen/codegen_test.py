@@ -30,7 +30,7 @@ def div_myfunc(x, y = 1):
     a = y
     return a / b # y / (x / x)
 
-def beale_func(x, y = 1):
+def beale_func(x = 3, y = 0.5):
     a = x
     b = 1.5 - a
     c = y
@@ -81,5 +81,9 @@ def test_func(x):
 
 from autodiff.codegen import value_and_grad, value_and_grad_code
 
-print(value_and_grad(test_func)(1))
-print(value_and_grad_code(test_func))
+func = beale_func
+
+print("generated code:")
+print(value_and_grad_code(func))
+print("#" * 20)
+print("function value eval", value_and_grad(func)())

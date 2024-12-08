@@ -69,7 +69,7 @@ class ForwardCodegenWalker:
         return max_precedence
 
 
-    def walk(self, node: Node, assignment=False, current_precedence: int = 100):
+    def walk(self, node: Node, current_precedence: int = 100, assignment=False):
         match node:
             case Variable():
                 if node.name in self.aliases.keys():
@@ -93,8 +93,8 @@ class ForwardCodegenWalker:
 
                 expr_max_precedence = self.get_max_precedence(node)
                 my_precedence = self.operator_precedence[type(node)]
-                code = node.forward_codegen(lambda node: self.walk(node, current_precedence=my_precedence))
-
+                #code = node.forward_codegen(lambda node: self.walk(node, current_precedence=my_precedence))
+                code = node.forward_codegen(self.walk, intermediate_value_node_indices=self.generate_intermediate_value_node_indices, current_precedence=my_precedence)
                 if node.node_index in self.generate_intermediate_value_node_indices:
                     self.intermediate_value_code_callback(f"{node.get_value_var_name()} = {code}")
 
@@ -107,13 +107,17 @@ class ForwardCodegenWalker:
                 if expr_tag not in self.generated_exprs:
                     self.generated_exprs.append(expr_tag)
                 
-                code = node.forward_codegen(self.walk)
+                my_precedence = self.operator_precedence[type(node)]
+                code = node.forward_codegen(self.walk, self.generate_intermediate_value_node_indices, my_precedence)
                 if node.node_index in self.generate_intermediate_value_node_indices:
                     self.intermediate_value_code_callback(f"{node.get_value_var_name()} = {code}")
                 return code
 
 
 class ForwardDebugCodegenWalker:
+    def __init__(self, intermediate_value_node_indices: set[int] = set()):
+        self.intermediate_value_node_indices = intermediate_value_node_indices
+
     def walk(self, node: Node, assignment=False):
         match node:
             case Variable():
@@ -125,9 +129,9 @@ class ForwardDebugCodegenWalker:
             case ops.Const():
                 return f"n{node.node_index}"
             case ops.BinaryOp():
-                return node.forward_codegen(self.walk)
+                return node.forward_codegen(self.walk, self.intermediate_value_node_indices)
             case ops.UnaryOp():
-                return node.forward_codegen(self.walk)
+                return node.forward_codegen(self.walk, self.intermediate_value_node_indices)
 
 
 class BackwardCodegenWalker:
