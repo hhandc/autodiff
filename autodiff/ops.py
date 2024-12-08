@@ -96,11 +96,19 @@ class Const(Node, EvalOverloader):
     
     def backward(self, adjoint: float = None):
         return
-
+    
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.value})"
-
-
+    
+    def get_value_var_name(self):
+        return str(self.value)
+    
+    def forward_codegen(self, walk_function: callable):
+        return str(self.value)
+    
+    def backward_codegen(self, adjoint_var_name: str, adjoint_target_variables: set[str], callback: callable, code_callback: callable):
+        return 
+    
 class Op(Node, EvalOverloader):
     """
     Base class for operator AST node
@@ -248,8 +256,8 @@ class Mul(BinaryOp):
         else:
             code_callback(f"adjoint_n{self.node_index} = 1.0")
 
-        callback(self.left, f"adjoint_n{self.node_index} * value_n{self.right.node_index}", adjoint_target_variables, callback, code_callback)
-        callback(self.right, f"adjoint_n{self.node_index} * value_n{self.left.node_index}", adjoint_target_variables, callback, code_callback)
+        callback(self.left, f"adjoint_n{self.node_index} * {self.right.get_value_var_name()}", adjoint_target_variables, callback, code_callback)
+        callback(self.right, f"adjoint_n{self.node_index} * {self.left.get_value_var_name()}", adjoint_target_variables, callback, code_callback)
 
 
 class Div(BinaryOp):
@@ -282,8 +290,8 @@ class Div(BinaryOp):
         else:
             code_callback(f"adjoint_n{self.node_index} = 1.0")
 
-        callback(self.left, f"adjoint_n{self.node_index} * value_n{self.right.node_index} ** -1", adjoint_target_variables, callback, code_callback)
-        callback(self.right, f"adjoint_n{self.node_index} * -1 * value_n{self.left.node_index} * value_n{self.right.node_index} ** -2", adjoint_target_variables, callback, code_callback)
+        callback(self.left, f"adjoint_n{self.node_index} * {self.right.get_value_var_name()} ** -1", adjoint_target_variables, callback, code_callback)
+        callback(self.right, f"adjoint_n{self.node_index} * -1 * {self.left.get_value_var_name()} * {self.right.get_value_var_name()} ** -2", adjoint_target_variables, callback, code_callback)
 
 
 class Pow(BinaryOp):
@@ -313,6 +321,15 @@ class Pow(BinaryOp):
 
     def backward_forward_dependents(self):
         return [self.right * self.left ** (self.right - 1), self.left ** self.right]
+    
+    def backward_codegen(self, adjoint_var_name: str, adjoint_target_variables: set[str], callback: callable, code_callback: callable):
+        if adjoint_var_name:
+            code_callback(f"adjoint_n{self.node_index} = {adjoint_var_name}")
+        else:
+            code_callback(f"adjoint_n{self.node_index} = 1.0")
+
+        callback(self.left, f"adjoint_n{self.node_index} * value_n{self.right.node_index} * value_n{self.left.node_index} ** (value_n{self.right.node_index} - 1)", adjoint_target_variables, callback, code_callback)
+        callback(self.right, f"adjoint_n{self.node_index} * value_n{self.left.node_index} ** value_n{self.right.node_index}", adjoint_target_variables, callback, code_callback)
 
 class Cos(UnaryOp):
     def eval(self) -> float:
@@ -361,6 +378,15 @@ class Exp(UnaryOp):
 
     def backward_forward_dependents(self):
         return [Exp(self.operand)]
+    
+    def backward_codegen(self, adjoint_var_name: str, adjoint_target_variables: set[str], callback: callable, code_callback: callable):
+        if adjoint_var_name:
+            code_callback(f"adjoint_n{self.node_index} = {adjoint_var_name}")
+        else:
+            code_callback(f"adjoint_n{self.node_index} = 1.0")
+
+        callback(self.left, f"math.exp(adjoint_n{self.node_index})", adjoint_target_variables, callback, code_callback)
+        callback(self.right, f"math.exp(adjoint_n{self.node_index})", adjoint_target_variables, callback, code_callback)
 
 class Neg(UnaryOp):
     def eval(self) -> float:

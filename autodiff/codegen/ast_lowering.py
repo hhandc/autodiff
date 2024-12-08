@@ -10,7 +10,6 @@ import autodiff.computational_graph as cg
 from autodiff.variable import Variable
 
 
-
 @dataclass
 class PyFuncArg:
     name: str
@@ -36,7 +35,7 @@ class PyExprEvaluator(NodeVisitor):
         self.node_creator = node_creator
 
     def visit_Constant(self, node):
-        return node.value
+        return self.node_creator.create(ops.Const, node.value)
 
     def visit_BinOp(self, node):
         left = node.left

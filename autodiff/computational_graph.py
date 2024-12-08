@@ -44,6 +44,9 @@ class Node:
         code_callback: function to pass the generated code
         """
         raise NotImplementedError()
+    
+    def get_value_var_name(self):
+        return f"value_n{self.node_index}"
 
 class NodeCreator:
     def __init__(self):

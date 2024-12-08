@@ -60,7 +60,7 @@ class SSAVariableTransformer:
                 else:
                     self.walk(node.right)
     
-            case UnaryOp():
+            case ops.UnaryOp():
                 if isinstance(node.operand, Variable):
                     var_name = node.operand.name
                     if var_name in self.scope_variables:
