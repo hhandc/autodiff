@@ -3,6 +3,9 @@ from autodiff.ast import Node
 
 
 class EvalOverloader:
+    """
+    This class is used to manage operator overloading for Ops from a single class.
+    """
     def __add__(self, other):
         return Add(self, other)
 
