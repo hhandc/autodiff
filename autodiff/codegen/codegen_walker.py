@@ -51,7 +51,25 @@ class ForwardCodegenWalker:
         self.aliases = variable_alias_map
         self.generated_exprs: list[str] = []
 
-    def walk(self, node: Node, assignment=False):
+        self.operator_precedence = {  # lower comes first
+            ops.Add: 3,
+            ops.Sub: 3,
+            ops.Mul: 2,
+            ops.Div: 2,
+            ops.Pow: 1
+        }
+
+    def get_max_precedence(self, node: Node, max_precedence: int = 0):
+        match node:
+            case ops.BinaryOp():
+                max_precedence = max(max_precedence, self.operator_precedence[type(node)])
+                max_precedence = max(max_precedence, self.get_max_precedence(node.left), max_precedence)
+                max_precedence = max(max_precedence, self.get_max_precedence(node.right), max_precedence)
+        
+        return max_precedence
+
+
+    def walk(self, node: Node, assignment=False, current_precedence: int = 100):
         match node:
             case Variable():
                 if node.name in self.aliases.keys():
@@ -72,9 +90,16 @@ class ForwardCodegenWalker:
                 if expr_tag not in self.generated_exprs:
                     self.generated_exprs.append(expr_tag)
 
-                code = node.forward_codegen(self.walk)
+
+                expr_max_precedence = self.get_max_precedence(node)
+                my_precedence = self.operator_precedence[type(node)]
+                code = node.forward_codegen(lambda node: self.walk(node, current_precedence=my_precedence))
+
                 if node.node_index in self.generate_intermediate_value_node_indices:
                     self.intermediate_value_code_callback(f"{node.get_value_var_name()} = {code}")
+
+                if expr_max_precedence > current_precedence:
+                    code = f"({code})"
                 return code
 
             case ops.UnaryOp():

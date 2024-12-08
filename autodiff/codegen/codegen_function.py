@@ -36,8 +36,6 @@ class FunctionCodeGen:
         self.node_map.populate_map(func_decl.return_body)
         collect_dependent_node_indices(func_decl.return_body)
 
-        print(self.dependent_forward_node_indices)
-
         self.dependent_variables = set(self.node_map.node_map.keys())
 
         self.code: list[str] = []
