@@ -62,3 +62,41 @@ def test_backward_easom():
     expr.backward()
 
     assert expr.value == approx(-1) and x.adjoint == approx(0) and y.adjoint == approx(0)
+
+def test_fractions():
+    x = Variable("x", 1)
+    y = Variable("y", 1)
+
+    expr = (x ** 2) / (y ** 2 + 1) - (y ** 2) / (x ** 2 + y)
+
+    x_val = x.value
+    y_val = y.value
+
+    dx = (2 * x_val) / (y_val ** 2 + 1) + (2 * x_val * y_val ** 2) / (x_val ** 2 + y_val) ** 2
+    dy = -(2 * y_val * x_val ** 2) / (y_val ** 2 + 1) ** 2 - (2 * y_val * x_val ** 2 + y_val ** 2) / (x_val ** 2 + y_val) ** 2
+
+    expr.eval()
+    expr.backward()
+
+
+    assert x.adjoint == approx(dx) and y.adjoint == approx(dy)
+
+def test_exponent_eq():
+    x = Variable("x", 1)
+    y = Variable("y", 1)
+    z = Variable("z", 1)
+
+    expr = Cos(x ** 2 + y * 2) - Exp(4 * x  - z ** 4 * y) + y ** 3
+
+    expr.eval()
+    expr.backward()
+
+    x_val = x.value
+    y_val = y.value
+    z_val = z.value
+
+    dx = -2 * x_val * math.sin(x_val ** 2 + 2 * y_val) - 4 * math.exp(4 * x_val - z_val ** 4 * y_val)
+    dy = -2 * math.sin(x_val ** 2 + 2 * y_val) + z_val ** 4 * math.exp(4 * x_val - z_val ** 4 * y_val) + 3 * y_val ** 2
+    dz = 4 * z_val ** 3 * y_val * math.exp(4 * x_val - z_val ** 4 * y_val)
+
+    assert x.adjoint == approx(dx) and y.adjoint == approx(dy) and z.adjoint == approx(dz)

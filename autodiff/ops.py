@@ -206,13 +206,13 @@ class Div(BinaryOp):
         """
         Let self = left / right
         dself/dleft = adjoint * right^(-1)
-        dself/dright = adjoint * -left
+        dself/dright = adjoint * -left * right^(-2)
         """
         super().backward(adjoint)
 
         self.left.backward(self.adjoint * self.right.value ** -1)
 
-        self.right.backward(self.adjoint * -self.left.value)
+        self.right.backward(self.adjoint * -self.left.value * self.right.value ** -2)
 
 
 class Pow(BinaryOp):
