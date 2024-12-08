@@ -52,11 +52,12 @@ class ForwardCodegenWalker:
         self.generated_exprs: list[str] = []
 
         self.operator_precedence = {  # lower comes first
-            ops.Add: 3,
-            ops.Sub: 3,
-            ops.Mul: 2,
-            ops.Div: 2,
-            ops.Pow: 1
+            ops.Add: 4,
+            ops.Sub: 4,
+            ops.Mul: 3,
+            ops.Div: 3,
+            ops.Pow: 2,
+            ops.Neg: 1
         }
 
     def get_max_precedence(self, node: Node, max_precedence: int = 0):

@@ -1,4 +1,4 @@
-from autodiff.codegen.ast_lowering import lower_func_decl, get_ast
+from autodiff.codegen.ast_lowering import lower_func_decl, get_ast, print_ast
 from autodiff.codegen.codegen_walker import ForwardCodegenWalker
 from autodiff.codegen.codegen_function import FunctionCodeGen
 from autodiff.codegen.cg_transform import SSAVariableTransformer
@@ -74,7 +74,12 @@ def test_func(x):
 
 from autodiff.codegen import value_and_grad, value_and_grad_code
 
+# print_ast(get_ast(test_func))
+
 print("generated code:")
 print(value_and_grad_code(test_func))
 print("#" * 20)
-print("function value eval", value_and_grad(test_func)(0))
+value_grad = value_and_grad(test_func)(0)
+print("function value eval:", value_grad[0])
+print("function value actual:", test_func(0))
+print("grads:", value_grad[1:])

@@ -440,6 +440,16 @@ class Neg(UnaryOp):
     def backward_value_dependent_node_indices(self):
         return []
 
+    def backward_codegen(self, adjoint_var_name: str, adjoint_target_variables: set[str], callback: callable, code_callback: callable):
+        # 1. emit adjoint_n = ... for myself
+        if adjoint_var_name:
+            code_callback(f"adjoint_n{self.node_index} = {adjoint_var_name}")
+        else:
+            code_callback(f"adjoint_n{self.node_index} = 1.0")
+
+        # 2. make left and right codegen with 1 as adjoint
+        callback(self.operand, f"-adjoint_n{self.node_index}", adjoint_target_variables, callback, code_callback)
+
 class sqrt(BinaryOp):
     def eval(self) -> float:
         self.value = math.sqrt(self.operand.eval())

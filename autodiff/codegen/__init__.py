@@ -24,6 +24,6 @@ def value_and_grad_code(f: callable, return_func_name = False) -> str:
 
     code = "\n".join(cg.code)
     if return_func_name:
-        return decl.function_name, code
+        return f"{decl.function_name}_value_and_grad", code
     else:
         return code

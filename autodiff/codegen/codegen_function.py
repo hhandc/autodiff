@@ -41,7 +41,7 @@ class FunctionCodeGen:
         self.code: list[str] = []
 
     def generate_declaration(self):
-        code = f"def {self.func_decl.function_name}("
+        code = f"def {self.func_decl.function_name}_value_and_grad("
         argstrs = []
         for arg in self.func_decl.args:
             if arg.default:

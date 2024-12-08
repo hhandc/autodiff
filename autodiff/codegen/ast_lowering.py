@@ -52,14 +52,26 @@ class PyExprEvaluator(NodeVisitor):
                 op = ops.Div
             case past.Pow():
                 op = ops.Pow
-            case past.USub():
-                op = ops.Neg
             case _:
                 raise Exception(f"Unsupported binary operation {op.__class__.__name__}")
         
         left = self.visit(left)
         right = self.visit(right)
         return self.node_creator.create(op, left, right)
+
+    def visit_UnaryOp(self, node):
+        op = node.op
+        operand = node.operand
+
+        match op:
+            case past.USub():
+                op = ops.Neg
+            case _:
+                raise Exception(f"Unsupported unary operation {op.__class__.__name__}")
+
+        operand = self.visit(operand)
+        return self.node_creator.create(op, operand)
+
 
     def visit_Name(self, node):
         if node.id not in self.variable_nodes:
