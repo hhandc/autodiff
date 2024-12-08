@@ -114,6 +114,11 @@ class Op(Node, EvalOverloader):
         else:
             self.adjoint = 1.0
 
+    """
+        adjoint = chain rule에서 자기 왼쪽항에서 계산된 값 갖고오기. 
+        when top node, adjacent is 1.0 because ex) partial z / partial z = 1
+    """
+
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}"
 
@@ -278,3 +283,8 @@ class Neg(UnaryOp):
         super().backward(adjoint)
 
         self.operand.backward(-self.adjoint)
+
+
+"""
+make a class sqrt and make a test
+"""

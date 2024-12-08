@@ -1,6 +1,7 @@
 from autodiff.variable import Variable
 from autodiff.ops import *
 from pytest import approx
+from autodiff.graph import draw_computation_graph
 import random
 import math
 
@@ -24,6 +25,8 @@ def test_backward_rosenbrock():
     expr = (a - x) ** 2 + b * (y - x ** 2) ** 2
     expr.eval()
     expr.backward()
+
+    draw_computation_graph("test1", expr)
 
     grad_x = -2 * a + 2 * x.value -4 * b * x.value + 4 * b * x.value ** 3
     grad_y = 2 * b * y.value - 2 * b * x.value ** 2

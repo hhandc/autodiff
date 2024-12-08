@@ -21,5 +21,3 @@ def test_random_exprs():
     true_val = eval(true_expr, locals())
 
     assert ast_val == approx(true_val)
-
-        
