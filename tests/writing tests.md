@@ -30,3 +30,7 @@ def test_floats():
 Integration can be seen as tests that bunch together multiple features of the package. For example, if you're testing the autodiff in an actual usage setting, you will want to write an integration test.
 
 On the other hand, unit tests are for testing a single function or a class. If you want to check that `Add` is correctly implemented, you would write an unit test for `Add`.
+
+## How to run all the test
+
+At the root directory with **venv enabled**, you can run `pytest tests/` to run all tests in the tests folder. Alternatively, I made a simple makefile so you can run `make tests`
