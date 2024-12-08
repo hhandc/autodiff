@@ -288,3 +288,13 @@ class Neg(UnaryOp):
 """
 make a class sqrt and make a test
 """
+
+class sqrt(BinaryOp):
+    def eval(self) -> float:
+        self.value = math.sqrt(self.operand.eval())
+        return self.value
+    
+    def backward(self, adjoint:float = None):
+        super().backward(adjoint)
+
+        self.operand.backward(self.adjoint * math.sqrt(self.operand.value()))

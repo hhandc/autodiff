@@ -57,3 +57,11 @@ def test_pow():
     expr = a ** b
 
     assert expr.eval() == approx(a_true ** b_true)
+
+def test_sqrt():
+    a_true = random.random()
+    a = Variable("a", a_true)
+
+    expr = a ** 0.5
+
+    assert expr.eval() == approx(math.sqrt(a_true))
