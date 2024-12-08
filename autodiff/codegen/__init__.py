@@ -4,23 +4,16 @@ from autodiff.codegen.codegen_function import FunctionCodeGen
 from autodiff.codegen.cg_transform import SSAVariableTransformer
 from autodiff.computational_graph import NodeCreator
 import math
+import inspect
 
 def value_and_grad(f: callable) -> callable:
-    node_creator = NodeCreator()
-
-    decl = lower_func_decl(get_ast(f), node_creator)
-    st = SSAVariableTransformer(decl)
-    decl = st.transform()
-    cg = FunctionCodeGen(decl, debug=True)
-    cg.generate()
-
-    code = "\n".join(cg.code)
-    function_name = decl.function_name
-    scope = {}
+    frame = inspect.currentframe().f_back
+    name, code = value_and_grad_code(f, return_func_name=True)
+    scope = frame.f_locals
     exec(code, scope)
-    return scope[function_name]
+    return scope[name]
 
-def value_and_grad_code(f: callable) -> str:
+def value_and_grad_code(f: callable, return_func_name = False) -> str:
     node_creator = NodeCreator()
 
     decl = lower_func_decl(get_ast(f), node_creator)
@@ -30,4 +23,7 @@ def value_and_grad_code(f: callable) -> str:
     cg.generate()
 
     code = "\n".join(cg.code)
-    return code
+    if return_func_name:
+        return decl.function_name, code
+    else:
+        return code
