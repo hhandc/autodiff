@@ -440,7 +440,6 @@ class Neg(UnaryOp):
     def backward_value_dependent_node_indices(self):
         return []
 
-
 class sqrt(BinaryOp):
     def eval(self) -> float:
         self.value = math.sqrt(self.operand.eval())

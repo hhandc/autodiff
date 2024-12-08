@@ -51,21 +51,14 @@ def himmel_func(x, y):
 
     return b + d
 
-def maytas_func(x, y =1):
-    a = x           
-    b = y            
-    c = a * a        
-    d = b * b       
-    e = c + d
-    i = 0.26        
-    f = i * e   
-    g = a * b
-    i = -0.48        
-    h = i * g   
-    return f + h 
+def matyas_func(x, y):
+    a = x ** 2 + y ** 2
+    b = a * 0.26
+    c = -0.48 * x * y
+    return b + c
 
 def test_func(x):
-    return (x + 1) * 2
+    return (x + 0.11) * -1
 
 # node_creator = NodeCreator()
 
@@ -82,6 +75,6 @@ def test_func(x):
 from autodiff.codegen import value_and_grad, value_and_grad_code
 
 print("generated code:")
-print(value_and_grad_code(func))
+print(value_and_grad_code(test_func))
 print("#" * 20)
-print("function value eval", value_and_grad(func)())
+print("function value eval", value_and_grad(test_func)(0))
