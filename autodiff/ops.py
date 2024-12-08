@@ -1,5 +1,5 @@
 import typing
-from autodiff.ast import Node
+from autodiff.computational_graph import Node
 import math
 
 class EvalOverloader:
@@ -96,11 +96,19 @@ class Const(Node, EvalOverloader):
     
     def backward(self, adjoint: float = None):
         return
-
+    
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.value})"
-
-
+    
+    def get_value_var_name(self):
+        return str(self.value)
+    
+    def forward_codegen(self, walk_function: callable, intermediate_value_node_indices: set[int] = set(), current_precedence: int = 100):
+        return str(self.value)
+    
+    def backward_codegen(self, adjoint_var_name: str, adjoint_target_variables: set[str], callback: callable, code_callback: callable):
+        return 
+    
 class Op(Node, EvalOverloader):
     """
     Base class for operator AST node
@@ -130,7 +138,7 @@ class BinaryOp(Op, EvalOverloader):
         self.right = right
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({self.left}, {self.right})"
+        return f"{self.__class__.__name__}_n{self.node_index}({self.left}, {self.right})"
 
 
 class UnaryOp(Op, EvalOverloader):
@@ -139,7 +147,7 @@ class UnaryOp(Op, EvalOverloader):
         self.operand = operand
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({self.operand})"
+        return f"{self.__class__.__name__}_n{self.node_index}({self.operand})"
 
 class Add(BinaryOp):
     def eval(self) -> float:
@@ -160,7 +168,32 @@ class Add(BinaryOp):
         # da/dright = 1. We need to invoke right.backward()
         self.right.backward(self.adjoint)
 
+    def forward_codegen(self, walk_function: callable, intermediate_value_node_indices: set[int] = set(), current_precedence: int = 100):
+        left_code = walk_function(self.left, current_precedence)
+        if self.left.node_index in intermediate_value_node_indices:
+            left_code =  self.left.get_value_var_name()
 
+        right_code = walk_function(self.right, current_precedence)
+        if self.right.node_index in intermediate_value_node_indices:
+            right_code =  self.right.get_value_var_name()
+
+        return f"{left_code} + {right_code}"
+
+    def backward_value_dependent_node_indices(self):
+        return []
+
+    def backward_codegen(self, adjoint_var_name: str, adjoint_target_variables: set[str], callback: callable, code_callback: callable):
+        # 1. emit adjoint_n = ... for myself
+        if adjoint_var_name:
+            code_callback(f"adjoint_n{self.node_index} = {adjoint_var_name}")
+        else:
+            code_callback(f"adjoint_n{self.node_index} = 1.0")
+
+        # 2. make left and right codegen with 1 as adjoint
+        callback(self.left, f"adjoint_n{self.node_index}", adjoint_target_variables, callback, code_callback)
+        callback(self.right, f"adjoint_n{self.node_index}", adjoint_target_variables, callback, code_callback)
+
+ 
 class Sub(BinaryOp):
     def eval(self) -> float:
         self.value = self.left.eval() - self.right.eval()
@@ -180,6 +213,29 @@ class Sub(BinaryOp):
         # da/dright = -1. We need to invoke right.backward()
         self.right.backward(-self.adjoint)
 
+    def forward_codegen(self, walk_function: callable, intermediate_value_node_indices: set[int] = set(), current_precedence: int = 100):
+        left_code = walk_function(self.left, current_precedence)
+        if self.left.node_index in intermediate_value_node_indices:
+            left_code =  self.left.get_value_var_name()
+
+        right_code = walk_function(self.right, current_precedence)
+        if self.right.node_index in intermediate_value_node_indices:
+            right_code =  self.right.get_value_var_name()
+        return f"{left_code} - {right_code}"
+
+    def backward_value_dependent_node_indices(self):
+        return []
+    
+    def backward_codegen(self, adjoint_var_name: str, adjoint_target_variables: set[str], callback: callable, code_callback: callable):
+        # 1. emit adjoint_n = ... for myself
+        if adjoint_var_name:
+            code_callback(f"adjoint_n{self.node_index} = {adjoint_var_name}")
+        else:
+            code_callback(f"adjoint_n{self.node_index} = 1.0")
+
+        # 2. make left with 1 as adjoint, but right as -1? i think
+        callback(self.left, f"adjoint_n{self.node_index}", adjoint_target_variables, callback, code_callback)
+        callback(self.right, f"-1 * adjoint_n{self.node_index}", adjoint_target_variables, callback, code_callback)
 
 class Mul(BinaryOp):
     def eval(self) -> float:
@@ -202,6 +258,30 @@ class Mul(BinaryOp):
         # dself/dright = left.value
         self.right.backward(self.adjoint * self.left.value)
 
+    def forward_codegen(self, walk_function: callable, intermediate_value_node_indices: set[int] = set(), current_precedence: int = 100):
+        left_code = walk_function(self.left, current_precedence)
+        if self.left.node_index in intermediate_value_node_indices:
+            left_code =  self.left.get_value_var_name()
+
+        right_code = walk_function(self.right, current_precedence)
+        if self.right.node_index in intermediate_value_node_indices:
+            right_code =  self.right.get_value_var_name()
+        return f"{left_code} * {right_code}"
+
+    def backward_value_dependent_node_indices(self):
+        return [self.right.node_index, self.left.node_index]
+    
+    def backward_codegen(self, adjoint_var_name: str, adjoint_target_variables: set[str], callback: callable, code_callback: callable):
+        # 1. emit adjoint_n = ... for myself
+        if adjoint_var_name:
+            code_callback(f"adjoint_n{self.node_index} = {adjoint_var_name}")
+        else:
+            code_callback(f"adjoint_n{self.node_index} = 1.0")
+
+        callback(self.left, f"adjoint_n{self.node_index} * {self.right.get_value_var_name()}", adjoint_target_variables, callback, code_callback)
+        callback(self.right, f"adjoint_n{self.node_index} * {self.left.get_value_var_name()}", adjoint_target_variables, callback, code_callback)
+
+
 class Div(BinaryOp):
     def eval(self) -> float:
         self.value = self.left.eval() / self.right.eval()
@@ -218,6 +298,29 @@ class Div(BinaryOp):
         self.left.backward(self.adjoint * self.right.value ** -1)
 
         self.right.backward(self.adjoint * -self.left.value * self.right.value ** -2)
+
+    def forward_codegen(self, walk_function: callable, intermediate_value_node_indices: set[int] = set(), current_precedence: int = 100):
+        left_code = walk_function(self.left, current_precedence)
+        if self.left.node_index in intermediate_value_node_indices:
+            left_code =  self.left.get_value_var_name()
+
+        right_code = walk_function(self.right, current_precedence)
+        if self.right.node_index in intermediate_value_node_indices:
+            right_code =  self.right.get_value_var_name()
+        return f"{left_code} / {right_code}"
+
+    def backward_value_dependent_node_indices(self):
+        return [self.left.node_index, self.right.node_index]
+    
+    def backward_codegen(self, adjoint_var_name: str, adjoint_target_variables: set[str], callback: callable, code_callback: callable):
+        # 1. emit adjoint_n = ... for myself
+        if adjoint_var_name:
+            code_callback(f"adjoint_n{self.node_index} = {adjoint_var_name}")
+        else:
+            code_callback(f"adjoint_n{self.node_index} = 1.0")
+
+        callback(self.left, f"adjoint_n{self.node_index} * {self.right.get_value_var_name()} ** -1", adjoint_target_variables, callback, code_callback)
+        callback(self.right, f"adjoint_n{self.node_index} * -1 * {self.left.get_value_var_name()} * {self.right.get_value_var_name()} ** -2", adjoint_target_variables, callback, code_callback)
 
 
 class Pow(BinaryOp):
@@ -242,6 +345,27 @@ class Pow(BinaryOp):
         # dself/dright = left ** right ln left
         self.right.backward(self.adjoint * self.left.value ** self.right.value * math.log(self.left.value) if self.left.value != 0 else 0)
 
+    def forward_codegen(self, walk_function: callable, intermediate_value_node_indices: set[int] = set(), current_precedence: int = 100):
+        left_code = walk_function(self.left, current_precedence)
+        if self.left.node_index in intermediate_value_node_indices:
+            left_code =  self.left.get_value_var_name()
+
+        right_code = walk_function(self.right, current_precedence)
+        if self.right.node_index in intermediate_value_node_indices:
+            right_code =  self.right.get_value_var_name()
+        return f"{left_code} ** {right_code}"
+
+    def backward_value_dependent_node_indices(self):
+        return [self.left.node_index, self.right.node_index]
+    
+    def backward_codegen(self, adjoint_var_name: str, adjoint_target_variables: set[str], callback: callable, code_callback: callable):
+        if adjoint_var_name:
+            code_callback(f"adjoint_n{self.node_index} = {adjoint_var_name}")
+        else:
+            code_callback(f"adjoint_n{self.node_index} = 1.0")
+
+        callback(self.left, f"adjoint_n{self.node_index} * {self.right.get_value_var_name()} * {self.left.get_value_var_name()} ** ({self.right.get_value_var_name()} - 1)", adjoint_target_variables, callback, code_callback)
+        callback(self.right, f"adjoint_n{self.node_index} * {self.left.get_value_var_name()} ** {self.right.get_value_var_name()}", adjoint_target_variables, callback, code_callback)
 
 class Cos(UnaryOp):
     def eval(self) -> float:
@@ -253,6 +377,12 @@ class Cos(UnaryOp):
 
         self.operand.backward(self.adjoint * -math.sin(self.operand.value))
 
+    def forward_codegen(self, walk_function: callable, intermediate_value_node_indices: set[int] = set(), current_precedence: int = 100):
+        return f"math.cos({walk_function(self.operand)})"
+
+    def backward_value_dependent_node_indices(self):
+        return [self.operand.node_index]
+
 class Sin(UnaryOp):
     def eval(self) -> float:
         self.value = math.sin(self.operand.eval())
@@ -263,6 +393,11 @@ class Sin(UnaryOp):
 
         self.operand.backward(self.adjoint * math.cos(self.operand.value))
 
+    def forward_codegen(self, walk_function: callable, intermediate_value_node_indices: set[int] = set(), current_precedence: int = 100):
+        return f"math.sin({walk_function(self.operand)})"
+
+    def backward_value_dependent_node_indices(self):
+        return [Cos(self.operand)]
 
 class Exp(UnaryOp):
     def eval(self) -> float:
@@ -274,6 +409,21 @@ class Exp(UnaryOp):
 
         self.operand.backward(self.adjoint * math.exp(self.operand.value))
 
+    def forward_codegen(self, walk_function: callable, intermediate_value_node_indices: set[int] = set(), current_precedence: int = 100):
+        return f"math.exp({walk_function(self.operand)})"
+
+    def backward_value_dependent_node_indices(self):
+        return []
+    
+    def backward_codegen(self, adjoint_var_name: str, adjoint_target_variables: set[str], callback: callable, code_callback: callable):
+        if adjoint_var_name:
+            code_callback(f"adjoint_n{self.node_index} = {adjoint_var_name}")
+        else:
+            code_callback(f"adjoint_n{self.node_index} = 1.0")
+
+        callback(self.left, f"math.exp(adjoint_n{self.node_index})", adjoint_target_variables, callback, code_callback)
+        callback(self.right, f"math.exp(adjoint_n{self.node_index})", adjoint_target_variables, callback, code_callback)
+
 class Neg(UnaryOp):
     def eval(self) -> float:
         self.value = -self.operand.eval()
@@ -284,10 +434,21 @@ class Neg(UnaryOp):
 
         self.operand.backward(-self.adjoint)
 
+    def forward_codegen(self, walk_function: callable, intermediate_value_node_indices: set[int] = set(), current_precedence: int = 100):
+        return f"-{walk_function(self.operand)}"
 
-"""
-make a class sqrt and make a test
-"""
+    def backward_value_dependent_node_indices(self):
+        return []
+
+    def backward_codegen(self, adjoint_var_name: str, adjoint_target_variables: set[str], callback: callable, code_callback: callable):
+        # 1. emit adjoint_n = ... for myself
+        if adjoint_var_name:
+            code_callback(f"adjoint_n{self.node_index} = {adjoint_var_name}")
+        else:
+            code_callback(f"adjoint_n{self.node_index} = 1.0")
+
+        # 2. make left and right codegen with 1 as adjoint
+        callback(self.operand, f"-adjoint_n{self.node_index}", adjoint_target_variables, callback, code_callback)
 
 class sqrt(BinaryOp):
     def eval(self) -> float:
@@ -298,3 +459,9 @@ class sqrt(BinaryOp):
         super().backward(adjoint)
 
         self.operand.backward(self.adjoint * math.sqrt(self.operand.value()))
+
+    def forward_codegen(self, walk_function: callable, intermediate_value_node_indices: set[int] = set(), current_precedence: int = 100):
+        return f"math.sqrt({walk_function(self.operand)})"        
+
+    def backward_value_dependent_node_indices(self):
+        return [sqrt(self.operand)]
