@@ -78,7 +78,6 @@ def test_fractions():
     expr.eval()
     expr.backward()
 
-
     assert x.adjoint == approx(dx) and y.adjoint == approx(dy)
 
 def test_exponent_eq():
