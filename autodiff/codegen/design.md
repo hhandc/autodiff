@@ -8,14 +8,14 @@ codegen works on the computation graph
     a = x
     b = a
     a = y
-    a + b  # this is x + y
+    a + b  # this is y + x
     ```
     gets transformed into:
     ```
-    a1 = x
-    b = a1
-    a2 = y
-    a2 + y
+    a = x
+    b = a
+    a1 = y
+    a1 + b
     ```
 2. Find what portions of forward evaluation are needed for backward calculation.
     

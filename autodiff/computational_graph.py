@@ -29,6 +29,21 @@ class Node:
         """
         raise NotImplementedError()
 
+    def forward_codegen(self, walk_function: callable):
+        """
+        walk_function : Function which should be used to walk down the tree.
+                        Children of the current node should be passed as arg to this function.
+        """
+        raise NotImplementedError()
+
+    def backward_codegen(self, adjoint_var_name: str, adjoint_target_variables: set[str], callback: callable, code_callback: callable):
+        """
+        adjoint_var_name: variable of the adjoint which is the received adjoint value
+        adjoint_target_variables: name of the variables which adjoints need to be accumulated
+        callback: function to pass children for continued iteration
+        code_callback: function to pass the generated code
+        """
+        raise NotImplementedError()
 
 class NodeCreator:
     def __init__(self):

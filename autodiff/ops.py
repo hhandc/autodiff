@@ -119,13 +119,6 @@ class Op(Node, EvalOverloader):
         when top node, adjacent is 1.0 because ex) partial z / partial z = 1
     """
 
-    def forward_codegen(self, walk_function: callable):
-        """
-        walk_function : Function which should be used to walk down the tree.
-                        Children of the current node should be passed as arg to this function.
-        """
-        raise NotImplementedError()
-
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}"
 
@@ -173,10 +166,18 @@ class Add(BinaryOp):
     def backward_forward_dependents(self):
         return []
 
-    def backward_codegen(self, adjoint_expr: Node, callback: callable):
-        return f"adjoint_n{self.node_index} = {self.adjoint}"
+    def backward_codegen(self, adjoint_var_name: str, adjoint_target_variables: set[str], callback: callable, code_callback: callable):
+        # 1. emit adjoint_n = ... for myself
+        if adjoint_var_name:
+            code_callback(f"adjoint_n{self.node_index} = {adjoint_var_name}")
+        else:
+            code_callback(f"adjoint_n{self.node_index} = 1.0")
 
+        # 2. make left and right codegen with 1 as adjoint
+        callback(self.left, f"adjoint_n{self.node_index}", adjoint_target_variables, callback, code_callback)
+        callback(self.right, f"adjoint_n{self.node_index}", adjoint_target_variables, callback, code_callback)
 
+ 
 class Sub(BinaryOp):
     def eval(self) -> float:
         self.value = self.left.eval() - self.right.eval()

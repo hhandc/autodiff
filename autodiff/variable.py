@@ -36,5 +36,21 @@ class Variable(Node, ops.EvalOverloader):
         if not isinstance(self.value, Number):
             self.value.backward(adjoint)
 
+    def backward_codegen(self, adjoint_var_name: str, adjoint_target_variables: set[str], callback: callable, code_callback: callable):
+        if self.name in adjoint_target_variables:
+            if adjoint_var_name:
+                code_callback(f"adjoint_{self.name} += {adjoint_var_name}")
+            else:
+                raise Exception(f"edge case for backward_codegen for variable {self.name}")
+
+        else:
+            if adjoint_var_name:
+                code_callback(f"adjoint_n{self.node_index} = {adjoint_var_name}")
+            else:
+                code_callback(f"adjoint_n{self.node_index} = 1.0")
+
+        if not isinstance(self.value, Number):
+            callback(self.value, adjoint_var_name, adjoint_target_variables, callable, code_callback)
+
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}_n{self.node_index}({self.name}, {self.value})"

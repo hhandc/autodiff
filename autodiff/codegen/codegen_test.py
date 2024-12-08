@@ -6,10 +6,10 @@ from autodiff.computational_graph import NodeCreator
 from math import sin
 
 def myfunc(x, y = 1):
-    a = sin(x)
+    a = x
     b = a + x
-    a = y + a
-    return a + b 
+    a = y
+    return a + b # x + x + y
 
 node_creator = NodeCreator()
 

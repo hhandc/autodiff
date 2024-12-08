@@ -1,5 +1,5 @@
 from autodiff.computational_graph import Node
-from autodiff.codegen.codegen_walker import NodeMap, ForwardCodegenWalker, ForwardDebugCodegenWalker
+from autodiff.codegen.codegen_walker import NodeMap, ForwardCodegenWalker, ForwardDebugCodegenWalker, BackwardCodegenWalker
 from autodiff.variable import Variable
 from autodiff.codegen.ast_lowering import PyFuncDeclaration
 import autodiff.ops as ops
@@ -64,16 +64,29 @@ class FunctionCodeGen:
 
         if self.debug:
             forward_return_expr = forward_return_expr.ljust(self.debug_ljust, " ")
-            forward_return_expr += "  # " + debug_walker.walk(self.func_decl.return_body) 
+            forward_return_expr += f"  # n{self.func_decl.return_body.node_index}: " + debug_walker.walk(self.func_decl.return_body) 
         self.code.append("    " + forward_return_expr)
 
     def generate_backward(self):
+        adjoint_target_variables = set()
         for arg_obj in self.func_decl.args:
             arg_name = arg_obj.name
+            adjoint_target_variables.add(arg_name)
             self.code.append("    " + f"adjoint_{arg_name} = 0.0")
+
+        walker = BackwardCodegenWalker(adjoint_target_variables)
+        walker.walk_init(self.func_decl.return_body)
+
+        for code in walker.code:
+            self.code.append("    " + code)
+
+    def generate_return(self):
+        adjoints = [f"adjoint_{arg.name}" for arg in self.func_decl.args]
+        self.code.append(f"    return forward_return, {', '.join(adjoints)}")
 
     def generate(self):
         self.generate_declaration()
         self.generate_forward()
         self.code.append("")
         self.generate_backward()
+        self.generate_return()

@@ -92,15 +92,16 @@ class ForwardDebugCodegenWalker:
 
 
 class BackwardCodegenWalker:
-    def __init__(self, adjoint_variables: list[str]):
-        self.adjoint_variables = adjoint_variables
+    def __init__(self, adjoint_target_variables: set[str]):
+        self.adjoint_target_variables = adjoint_target_variables
+        self.calculated_node_indices = set()
+        self.code = []  # unindented code
 
-    def walk(self, node: Node, adjoint_expr: Node):
-        match node:
-            case Variable():
-                name = node.name
-                if name in self.adjoint_variables:
-                    return f"adjoint_{name} += {self.walk(adjoint_expr)}"
+    def code_callback(self, code:str):
+        self.code.append(code)
 
-            case ops.UnaryOp():
-                pass
+    def walk_init(self, node):
+        self.walk(node, None, self.adjoint_target_variables, self.walk, self.code_callback)
+
+    def walk(self, node: Node, adjoint_var_name: str, adjoint_target_variables: set[str], callback: callable, code_callback: callable):
+        node.backward_codegen(adjoint_var_name, adjoint_target_variables, self.walk, self.code_callback)
