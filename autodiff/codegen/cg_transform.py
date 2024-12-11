@@ -7,7 +7,7 @@ from collections import defaultdict
 
 class SSAVariableTransformer:
     """
-    Transform the statements in a PyFuncDeclaration into a SSA form, by renaming reassignments to new variables.
+    Transform the statements in a PyFuncDeclaration into a SSA form, by renaming reassignments to new variables. 
     """
     def __init__(self, func_decl: PyFuncDeclaration):
         self.func_decl = func_decl
