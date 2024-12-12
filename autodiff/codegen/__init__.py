@@ -33,10 +33,10 @@ def saved_value_and_grad(f: callable) -> callable:
     check = manage_Code()
     frame = inspect.currentframe().f_back
 
-    if (check.retrieve(f.__name__) == -1):
-        name, code = value_and_grad_code(f, return_func_name=True)
+    if (check.retrieve(f) == -1):
+        name, code = saved_value_and_grad_code(f, return_func_name=True)
     else:
-        code = check.retrieve(f.__name__)
+        code = check.retrieve(f)
 
     scope = frame.f_locals
     exec(code, scope)
@@ -54,7 +54,7 @@ def saved_value_and_grad_code(f: callable, return_func_name = False) -> str:
     code = "\n".join(cg.code)
 
     check = manage_Code()
-    check.save(f, code)
+    check.save(f.__name__, f)
     if return_func_name:
         return f"{decl.function_name}_value_and_grad", code
     else:

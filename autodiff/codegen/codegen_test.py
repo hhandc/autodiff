@@ -5,6 +5,8 @@ from autodiff.codegen.cg_transform import SSAVariableTransformer
 from autodiff.computational_graph import NodeCreator
 from math import sin
 import time
+import psutil
+import os
 
 def sub_myfunc(x, y = 1):
     a = x
@@ -82,11 +84,18 @@ from autodiff.codegen import value_and_grad, value_and_grad_code, saved_value_an
 # print("function value actual:", himmel_func(3, 2))
 # print("grads:", value_grad[1:])
 
-start = time.time()
+def process_memory():
+    process = psutil.Process(os.getpid())
+    mem_info = process.memory_info()
+    return mem_info.rss
 
-for i in range(0, 1):
+start = time.time()
+mem_before = process_memory()
+for i in range(0, 10):
     value_grad = saved_value_and_grad(himmel_func)(3, 2)
 
+mem_after = process_memory()
 end = time.time()
 
+print("{}:consumed memory: {:,}".format(mem_before, mem_after, mem_after - mem_before))
 print(end - start) 

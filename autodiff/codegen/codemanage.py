@@ -8,16 +8,6 @@ class manage_Code:
         os.makedirs(self.storage_dir, exist_ok=True)
 
     def save(self, file_name: str, f: callable) -> str:
-        """
-        Saves the provided callable's source code into a file with the given name.
-        Args:
-            file_name (str): The name of the file to save the code.
-            f (callable): The callable object to save (e.g., a function).
-        Returns:
-            str: The path to the saved code file.
-        Raises:
-            TypeError: If the provided object is not callable.
-        """
         code = inspect.getsource(f)
         
         file_path = os.path.join(self.storage_dir, file_name + ".py")
@@ -25,17 +15,8 @@ class manage_Code:
             file.write(code)
         return file_path
 
-    def retrieve(self, file_name: str) -> str:
-        """
-        Retrieves the code from a file with the given name.
-        Args:
-            file_name (str): The name of the file to retrieve the code from.
-        Returns:
-            str: The retrieved code content.
-        Raises:
-            FileNotFoundError: If the file does not exist.
-        """
-        file_path = os.path.join(self.storage_dir, file_name + ".py")
+    def retrieve(self, f: callable) -> str:
+        file_path = os.path.join(self.storage_dir, f.__name__ + ".py")
         if not os.path.exists(file_path):
             return -1
         
