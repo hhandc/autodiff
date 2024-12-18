@@ -151,6 +151,10 @@ def test_assignment_multi():
 
     assert x.adjoint == approx(dx) and y.adjoint == approx(dy)
 
-"""
-make backward sqrt
-"""
+
+x = Variable("x1", 0)
+y = Variable("y1", 0)
+
+expr = 0.26 * (x**2 + y**2) - 0.48 * x * y
+
+draw_computation_graph("matyas_1", expr)

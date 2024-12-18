@@ -5,6 +5,7 @@ from autodiff.codegen.cg_transform import SSAVariableTransformer
 from autodiff.computational_graph import NodeCreator
 from autodiff.variable import Variable
 from autodiff.ops import *
+from autodiff.graph import draw_computation_graph
 import time
 import psutil
 import os
@@ -90,58 +91,68 @@ def process_memory():
     mem_info = process.memory_info()
     return mem_info.rss
 
-# start = time.time()
-# mem_before = process_memory()
+start = time.time()
+mem_before = process_memory()
 
-# beale_grad_func = value_and_grad(beale_func)
-# himmel_grad_func = value_and_grad(himmel_func)
-# matyas_grad_func = value_and_grad(matyas_func)
+beale_grad_func = value_and_grad(beale_func)
+himmel_grad_func = value_and_grad(himmel_func)
+matyas_grad_func = value_and_grad(matyas_func)
+
+end_codegen_time = time.time()
+mem_post_codegen = process_memory()
+
+print(f"codegen time: {round(end_codegen_time - start, 5)} codegen mem kb: {(mem_post_codegen - mem_before) / 1024}")
+
+start = time.time()
+mem_before = process_memory()
 
 # for i in range(0, 10000):
 #     value_grad_1 = value_and_grad(beale_func)(3, 0.5)
 #     value_grad_2 = value_and_grad(himmel_func)(3, 2)
 #     value_grad_3 = value_and_grad(matyas_func)(0, 0)
 
-# for i in range(0, 10000):
-#     value_grad_1 = beale_grad_func
-#     value_grad_2 = himmel_grad_func
-#     value_grad_3 = matyas_grad_func
+# start = time.time()
+# mem_before = process_memory()
 
-# mem_after = process_memory()
-# end = time.time()
-
-# print(mem_after - mem_before)
-# print(end - start) 
-
-start = time.time()
-mem_before = process_memory()
-
-for i in range(0,1000):
-    x = Variable("x", 3)
-    y = Variable("y", 0.5)
-
-    beale_expr = (1.5 - x + x * y) ** 2 + (2.25 - x + x * (y ** 2)) ** 2 + (2.625 - x + x * (y ** 3)) ** 2
-
-    beale_expr.eval()
-    beale_expr.backward()
-
-    x = Variable("x", 3)
-    y = Variable("y", 2)
-
-    himmel_expr = (x ** 2 + y - 11) ** 2 + (x + y**2 + 7) ** 2
-
-    himmel_expr.eval()
-    himmel_expr.backward()    
-
-    x = Variable("x", 0)
-    y = Variable("y", 0)
-
-    matyas_expr = 0.26 * (x**2 + y**2) - 0.48 * x * y
-
-    matyas_expr.eval()
-    matyas_expr.backward()
+for i in range(0, 10000):
+    value_grad_1 = beale_grad_func(3, 0.5)
+    value_grad_2 = himmel_grad_func(3, 2)
+    value_grad_3 = matyas_grad_func(0, 0)
 
 mem_after = process_memory()
 end = time.time()
-print(mem_after - mem_before)
-print(end - start) 
+
+print(f"eval time: {round(end - start, 5)} eval mem kb: {(mem_after - mem_before) / 1024}")
+
+# start = time.time()
+# mem_before = process_memory()
+
+# for i in range(0,10000):
+#     x = Variable("x", 3)
+#     y = Variable("y", 0.5)
+
+#     beale_expr = (1.5 - x + x * y) ** 2 + (2.25 - x + x * (y ** 2)) ** 2 + (2.625 - x + x * (y ** 3)) ** 2
+
+#     beale_expr.eval()
+#     beale_expr.backward()
+
+#     x = Variable("x", 3)
+#     y = Variable("y", 2)
+
+#     himmel_expr = (x ** 2 + y - 11) ** 2 + (x + y**2 + 7) ** 2
+
+#     himmel_expr.eval()
+#     himmel_expr.backward()    
+
+#     x = Variable("x", 0)
+#     y = Variable("y", 0)
+
+#     matyas_expr = 0.26 * (x**2 + y**2) - 0.48 * x * y
+
+#     matyas_expr.eval()
+#     matyas_expr.backward()
+
+# mem_after = process_memory()
+# end = time.time()
+# print((mem_after - mem_before) / 1024)
+# print(round((end - start), 5))
